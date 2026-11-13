@@ -183,6 +183,9 @@ def test_agent_needs_model_and_no_opus():
     out = pre("Agent", {"subagent_type": "scout", "prompt": "p"})
     assert out["hookSpecificOutput"]["updatedInput"]["model"] == "haiku"
     assert decision(pre("Agent", {"subagent_type": "worker", "prompt": "p", "model": "opus"})) == "deny"
+    why = "p\nOPUS WHY: sonnet failed twice on this proof"
+    assert decision(pre("Agent", {"subagent_type": "worker", "prompt": why, "model": "opus"})) != "deny"
+    assert decision(pre("Agent", {"subagent_type": "worker", "prompt": "OPUS WHY: hard", "model": "opus"})) == "deny"
 
 
 
@@ -725,6 +728,7 @@ def test_workflow_opus_refused(tmp_path):
     script.write_text(opus.replace("opus", "claude-opus-5-5"), encoding="utf-8")
     assert decision(pre("Workflow", {"scriptPath": str(script)})) == "deny"
     assert decision(pre("Workflow", {"script": opus.replace("opus", "sonnet")})) != "deny"
+    assert decision(pre("Workflow", {"script": "// OPUS WHY: sonnet failed the proof twice\n" + opus})) != "deny"
     assert decision(pre("Workflow", {"name": "ship-batch"})) != "deny"
 
 
@@ -897,3 +901,9 @@ def test_compact_resets_read_state(tmp_path, monkeypatch):
     compact.main()
     state = common.load_state("s")
     assert "reads" not in state and state["keep"] == 1
+
+
+def test_subagent_cannot_ask_user_but_main_can():
+    event = {"tool_name": "AskUserQuestion", "tool_input": {"questions": []}, "transcript_path": "", "session_id": "s", "agent_id": "a1"}
+    assert decision(pretool.decide(event, {})) == "deny"
+    assert decision(pre("AskUserQuestion", {"questions": []})) != "deny"

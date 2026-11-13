@@ -88,9 +88,17 @@ SUITE = re.compile(
 )
 SUITE_TARGET = re.compile(r"\S+\.(?:test|spec)\.\w+|\S+/\S+\.(?:ts|tsx|js|mjs|py)\b|\S+::\S+|\s-k\s")
 NO_MODEL = "Agent call without `model`: pass `model: \"sonnet\"` (or haiku). Opus agents are banned."
-NO_OPUS = "Opus agents are banned: use `model: \"sonnet\"`."
+OPUS_WHY = re.compile(r"OPUS WHY:\s*\S+(?:\s+\S+){3,}")
+NO_OPUS = (
+    "Opus costs several times Sonnet. Default: `model: \"sonnet\"` for edits and judgment, `\"haiku\"` for mechanical work and search. "
+    "Opus only when Sonnet already failed this task or it is one hard design call: add a line `OPUS WHY: <what Sonnet cannot do here>` (4+ words) to the prompt."
+)
 WORKFLOW_OPUS = re.compile(r"\bmodel\s*:\s*[\"'`][^\"'`]*opus", re.IGNORECASE)
-NO_WORKFLOW_OPUS = "Workflow script sets an Opus model on an agent(): Opus agents are banned, use `model: 'sonnet'` or omit it."
+NO_WORKFLOW_OPUS = (
+    "Workflow agent() on Opus. Use `model: 'sonnet'` (edits, judgment) or `'haiku'` (mechanical, search). "
+    "Opus only with a comment `// OPUS WHY: <what Sonnet cannot do here>` (4+ words) in the script."
+)
+NO_ASK = "Subagents never ask the user: finish with your best reading and put the open question in your hand-back (`needs-owner: ...`)."
 SHIPPERS = frozenset({"shipper"})
 AGENTS_DIR = Path.home() / ".claude" / "agents"
 BUILTIN_READERS = frozenset({"Explore", "claude-code-guide", "Plan"})
@@ -665,7 +673,7 @@ def workflow_refusal(tool: str, params: dict) -> str | None:
     path = Path(str(params.get("scriptPath") or ""))
     if not script and path.is_file():
         script = path.read_text("utf-8", "replace")
-    return NO_WORKFLOW_OPUS if WORKFLOW_OPUS.search(script) else None
+    return NO_WORKFLOW_OPUS if WORKFLOW_OPUS.search(script) and not OPUS_WHY.search(script) else None
 
 
 def agent_defaults(tool: str, params: dict) -> dict | None:
@@ -692,7 +700,7 @@ def agent_refusal(event: dict, tool: str, params: dict, state: dict) -> str | No
     model = str(params.get("model") or "")
     if not model:
         return NO_MODEL
-    if "opus" in model:
+    if "opus" in model and not OPUS_WHY.search(f"{params.get('prompt') or ''}\n{params.get('description') or ''}"):
         return NO_OPUS
     return None
 
@@ -852,6 +860,10 @@ def decide(event: dict, state: dict) -> dict | None:
         return common.deny(f"$T is expanded only in Bash. Use the real path: {expanded[T_KEYS[tool]]}")
     if START_SESSION.match(tool) and isinstance(params.get("prompt"), str) and common.SUB_MARKER not in params["prompt"]:
         return common.allow_with({**params, "prompt": f"{common.SUB_RULES}\n\n{params['prompt']}"})
+    if tool == "AskUserQuestion" and (
+        event.get("agent_id") or common.is_sub_session(str(event.get("transcript_path") or ""), state)
+    ):
+        return common.deny(NO_ASK)
     defaulted = agent_defaults(tool, params)
     params = defaulted or params
     bad_agent = agent_refusal(event, tool, params, state) or workflow_refusal(tool, params)

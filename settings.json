@@ -12,7 +12,6 @@
   },
   "permissions": {
     "deny": [
-      "AskUserQuestion",
       "NotebookEdit",
       "Agent(fork)",
       "RemoteTrigger",
@@ -162,17 +161,6 @@
             "timeout": 5,
             "onFailure": "block",
             "if": "Bash(*LAUDE*)"
-          }
-        ]
-      },
-      {
-        "matcher": "Bash",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "sh ~/.claude/hooks/no-wait.sh sleep",
-            "timeout": 5,
-            "if": "Bash(*sleep *)"
           }
         ]
       },

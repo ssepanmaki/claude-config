@@ -35,10 +35,11 @@ Not applied, with reason:
 ## Left strict on purpose
 Opus-agent ban, `general-purpose` auto-rewrite to `worker`, curl-needs-timeout, heredoc file-write ban, no attribution trailers, rule-deletion refusal, hand-back hedge refusal, suppression (`noqa`, `type: ignore`) nudge, `rm -rf`/force-push gates.
 
-## Conflicts found, not changed (need a decision)
-1. `CLAUDE.md` says "Opus plans once" but `pretool.py` bans Opus agents (`NO_OPUS`): a plan by an Opus *agent* is refused. Intended meaning is probably the main session on Opus.
-2. `CLAUDE.md` says "No Grep/Glob: use Bash grep" but `pretool.py` suggests "use the Glob tool" in the `find` refusal and counts Grep/Glob in the read streak.
-3. `hooks/no-wait.sh` denies sleep >=120 s, `pretool.py` denies >30 s: the shell hook is now redundant for sleeps (it still covers `timeout`, `watch`, `tail -f`, `pkill -f`).
-4. `AskUserQuestion` is denied in `settings.json`, yet the `Stop` hook and `CLAUDE.md` still say "ask only if rework".
-5. `cloud-setup.sh` defaults to `dattruongtuan/claude-config`; this repo is `ssepanmaki/claude-config`. Set `CLAUDE_CONFIG_REPO` or change the default.
-6. `settings.json` has the placeholder path `/home/OMISTAJA/claude-mods` (marketplace) and `tools/slot.py` path in `pretool.py`.
+## Conflicts: resolved
+1. Opus agents/workflows allowed only with an `OPUS WHY: <4+ words>` line; the refusal steers hard to Sonnet (edits, judgment) and Haiku (mechanical, search).
+2. Grep/Glob vs Bash grep: left as is (Grep gets an auto `head_limit`; bash `grep -rn` has no cap). Crude check: one search was 6.3 KB as `grep -rn` vs 0.3 KB as a file list. Token cost of the tool schemas is unmeasured.
+3. `no-wait.sh` sleep check removed; `pretool.py` owns sleep (cap 30 s, longer: background + notification).
+4. `AskUserQuestion` allowed again for the main session; `pretool.py` denies it for subagents and sub-sessions.
+5. `cloud-setup.sh` default repo is now `ssepanmaki/claude-config`.
+6. `/home/OMISTAJA` is aliased to `$HOME` by `cloud-setup.sh`, and `tools/slot.py` ships in this repo: left as is.
+7. `sandbox.network.allowedDomains` skipped; relaxing the other repo skipped.

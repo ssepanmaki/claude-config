@@ -1,10 +1,10 @@
 #!/bin/bash
-# Cloud environment setup script: installs Dat's ~/.claude config from dattruongtuan/claude-config.
-# Preferred: add dattruongtuan/claude-config as a repo of the session/environment; the
+# Cloud environment setup script: installs Dat's ~/.claude config from ssepanmaki/claude-config.
+# Preferred: add ssepanmaki/claude-config as a repo of the session/environment; the
 # script copies from that checkout (no token to renew). Fallbacks: clone via the GitHub
 # proxy, then GH_TOKEN if set. Network: github.com reachable (default allowlist).
 set -euo pipefail
-REPO="${CLAUDE_CONFIG_REPO:-dattruongtuan/claude-config}"
+REPO="${CLAUDE_CONFIG_REPO:-ssepanmaki/claude-config}"
 T=$(mktemp -d); trap 'rm -rf "$T"' EXIT
 
 # deps first: hooks need python3 + jq
