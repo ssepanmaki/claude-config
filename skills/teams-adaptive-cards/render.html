@@ -1,0 +1,18 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Card render</title>
+<script src="https://unpkg.com/adaptivecards@3/dist/adaptivecards.min.js"></script>
+<style>body{margin:16px;background:#f5f5f5;font-family:Segoe UI,sans-serif}#card{max-width:440px;background:#fff;border-radius:8px;padding:4px}</style>
+<div id="card"></div>
+<script>
+window.renderCard = (payload) => {
+  const card = new AdaptiveCards.AdaptiveCard();
+  card.parse(payload);
+  const host = document.getElementById("card");
+  host.replaceChildren(card.render());
+  const result = card.validateProperties();
+  const warnings = [];
+  for (let i = 0; i < result.validationEvents.length; i++) warnings.push(result.validationEvents[i].message);
+  return { shown: host.innerText, warnings };
+};
+</script>

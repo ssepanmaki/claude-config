@@ -1,0 +1,238 @@
+<style>
+.cd-wrap{font-family:var(--font-anthropic-sans);color:var(--cds-text-primary,inherit);max-width:1100px;margin:0 auto;padding:24px 16px;display:flex;flex-direction:column;gap:24px}
+.cd-wrap h1{font-family:var(--font-anthropic-serif);font-size:28px;font-weight:500;margin:0 0 4px}
+.cd-wrap h2{font-size:14px;font-weight:600;margin:0 0 8px}
+.cd-sub{margin:0;color:var(--cds-text-secondary,#666);font-size:14px}
+.cd-kpis{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:12px}
+.cd-kpi{border:1px solid var(--cds-border-subtle,#ddd);border-radius:10px;padding:12px;min-width:0}
+.cd-kpi-l{font-size:12px;color:var(--cds-text-secondary,#666)}
+.cd-kpi-v{font-size:22px;font-weight:600;font-variant-numeric:tabular-nums}
+.cd-kpi-n{font-size:11px;color:var(--cds-text-secondary,#666)}
+.cd-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.cd-chart{position:relative;min-height:220px}
+.cd-chart svg{display:block;width:100%;height:auto;overflow:visible}
+.cd-chart text{fill:var(--cds-text-secondary,#666);font-size:11px;font-family:var(--font-anthropic-sans)}
+.cd-chart .domain,.cd-chart .tick line{stroke:var(--cds-border-subtle,#ddd)}
+.cd-tip{position:absolute;pointer-events:none;background:var(--cds-layer,#fff);border:1px solid var(--cds-border-subtle,#ddd);border-radius:6px;padding:4px 8px;font-size:12px;white-space:nowrap;display:none;box-shadow:0 2px 8px rgba(0,0,0,.12)}
+.cd-tables{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.cd-tbl{width:100%;border-collapse:collapse;font-size:13px}
+.cd-tbl th,.cd-tbl td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--cds-border-subtle,#ddd)}
+.cd-tbl th{font-weight:600;color:var(--cds-text-secondary,#666)}
+.cd-tbl .cd-n{text-align:right;font-variant-numeric:tabular-nums}
+.cd-empty{color:var(--cds-text-secondary,#666);font-size:13px;padding:12px 0}
+.cd-bc{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.cd-note{margin:0 0 8px;color:var(--cds-text-secondary,#666);font-size:12px}
+.cd-bt{display:block;width:100%;border-collapse:collapse}.cd-bt thead{display:none}
+.cd-bt tbody{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+.cd-card{display:flex;flex-direction:column;gap:8px;border:1px solid var(--cds-border-subtle,#ddd);border-radius:10px;padding:12px;min-width:0}
+.cd-card .cd-goal,.cd-card .cd-last{display:-webkit-box;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+.cd-goal{font-weight:600;font-size:14px;-webkit-line-clamp:2}
+.cd-last{font-size:13px;-webkit-line-clamp:4}
+.cd-lbl{font-size:11px;color:var(--cds-text-secondary,#666);text-transform:uppercase;letter-spacing:.04em}
+.cd-row{display:flex;flex-wrap:wrap;align-items:center;gap:8px;font-size:12px;color:var(--cds-text-secondary,#666)}
+.cd-chip{border:1px solid var(--cds-border-subtle,#ddd);border-radius:999px;padding:1px 8px;font-size:12px;color:var(--cds-text-primary,inherit)}
+.cd-pill{display:inline-flex;align-items:center;gap:5px;font-size:12px}
+.cd-pill:before{content:"";width:8px;height:8px;border-radius:50%;background:var(--cds-text-secondary,#999)}
+.cd-pill.run:before{background:var(--color-ok,#2e9e5b)}
+.cd-nt{width:100%;border-collapse:collapse;font-size:13px}
+.cd-nt td{padding:6px 8px;border-bottom:1px solid var(--cds-border-subtle,#ddd);vertical-align:top}
+.cd-nt .cd-d{color:var(--cds-text-secondary,#666)}
+@media(max-width:800px){.cd-bc{grid-template-columns:repeat(2,minmax(0,1fr))}.cd-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}.cd-charts,.cd-tables{grid-template-columns:1fr}}
+</style>
+<div class="cd-wrap">
+  <div>
+    <h1>Claude box</h1>
+    <p class="cd-sub">claude-box (Ubuntu VM over SSH) only. From<span data-source="summary" data-field="from"></span> to <span data-source="summary" data-field="to"></span>, active on <span data-source="summary" data-field="days_active"></span> days.</p>
+  </div>
+  <div class="cd-bc">
+    <div class="cd-kpi"><div class="cd-kpi-l">Sessions</div><div class="cd-kpi-v" data-source="board_counts" data-field="sessions"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Running</div><div class="cd-kpi-v" data-source="board_counts" data-field="running"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Idle</div><div class="cd-kpi-v" data-source="board_counts" data-field="idle"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Needs Dat</div><div class="cd-kpi-v" data-source="board_counts" data-field="needs"></div></div>
+  </div>
+  <div><h2>Needs Dat</h2>
+    <table class="cd-nt" id="cd-needs" data-source="needs" data-row-key="item">
+      <thead><tr hidden><th data-field="item">Item</th><th data-field="detail">Detail</th><th data-field="area">Area</th></tr></thead><tbody></tbody></table></div>
+  <div><h2>Sessions</h2>
+    <p class="cd-note">Tasks are inferred from each session's first prompt and latest reply; no session on the box used a task tool.</p>
+    <table class="cd-bt" id="cd-board" data-source="board" data-row-key="id">
+      <thead><tr><th data-field="goal">Goal</th><th data-field="project">Project</th><th data-field="branch">Branch</th><th data-field="state">State</th><th data-field="idle_minutes">Idle</th><th data-field="prompts">Prompts</th><th data-field="last">Latest status</th></tr></thead><tbody></tbody></table></div>
+  <div class="cd-kpis">
+    <div class="cd-kpi"><div class="cd-kpi-l">Sessions</div><div class="cd-kpi-v" data-source="summary" data-field="sessions"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Messages</div><div class="cd-kpi-v" data-source="summary" data-field="msgs"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Output tokens</div><div class="cd-kpi-v" data-source="summary" data-field="out_tokens"></div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Est. cost</div><div class="cd-kpi-v" data-source="summary" data-field="cost"></div><div class="cd-kpi-n">estimated at assumed list prices</div></div>
+    <div class="cd-kpi"><div class="cd-kpi-l">Commits</div><div class="cd-kpi-v" data-source="summary" data-field="commits"></div></div>
+  </div>
+  <div class="cd-charts">
+    <div><h2>Est. cost per day (USD)</h2><div class="cd-chart" id="cd-cost" data-source="daily_total"></div></div>
+    <div><h2>Sessions per day</h2><div class="cd-chart" id="cd-sess" data-source="daily_total"></div></div>
+  </div>
+  <div class="cd-tables">
+    <div><h2>Projects</h2>
+      <table class="cd-tbl" id="cd-projects" data-source="projects" data-row-key="project,source">
+        <thead><tr><th data-field="project">Project</th><th data-field="source">Source</th><th class="cd-n" data-field="sessions">Sessions</th><th class="cd-n" data-field="msgs">Msgs</th><th class="cd-n" data-field="cost">Cost</th></tr></thead><tbody></tbody></table></div>
+    <div><h2>Models</h2>
+      <table class="cd-tbl" id="cd-models" data-source="models" data-row-key="model">
+        <thead><tr><th data-field="model">Model</th><th class="cd-n" data-field="msgs">Msgs</th><th class="cd-n" data-field="cost">Cost</th></tr></thead><tbody></tbody></table></div>
+    <div><h2>Tools</h2>
+      <table class="cd-tbl" id="cd-tools" data-source="tools" data-row-key="tool">
+        <thead><tr><th data-field="tool">Tool</th><th class="cd-n" data-field="uses">Uses</th></tr></thead><tbody></tbody></table></div>
+    <div><h2>Commits by repo (top 10)</h2>
+      <table class="cd-tbl" id="cd-commits" data-source="commits_by_repo" data-row-key="repo">
+        <thead><tr><th data-field="repo">Repo</th><th class="cd-n" data-field="commits">Commits</th></tr></thead><tbody></tbody></table></div>
+  </div>
+</div>
+<script>
+dash.calc('board_counts', {
+  title: 'Board counts',
+  description: 'Session and needs counts.',
+  inputs: ['board', 'needs'],
+  fn: (board, needs) => [{
+    sessions: board.length,
+    running: board.filter((r) => r.state === 'running').length,
+    idle: board.filter((r) => r.state !== 'running').length,
+    needs: needs.length
+  }]
+});
+dash.calc('daily_total', {
+  title: 'Daily totals',
+  description: 'Sessions, messages, output tokens and estimated cost per date, claude-box only.',
+  inputs: ['daily'],
+  fn: (daily) => {
+    const m = {};
+    for (const r of daily) {
+      const t = m[r.date] || (m[r.date] = {date: r.date, sessions: 0, msgs: 0, out_tokens: 0, cost: 0});
+      t.sessions += r.sessions || 0; t.msgs += r.msgs || 0;
+      t.out_tokens += r.out_tokens || 0; t.cost += r.cost || 0;
+    }
+    return Object.values(m).sort((a, b) => a.date < b.date ? -1 : a.date > b.date ? 1 : 0);
+  }
+});
+dash.calc('commits_by_repo', {
+  title: 'Commits by repo',
+  description: 'Total commits per repo, top 10.',
+  inputs: ['commits'],
+  fn: (commits) => {
+    const m = {};
+    for (const r of commits) m[r.repo] = (m[r.repo] || 0) + (r.commits || 0);
+    return Object.entries(m).map(([repo, commits]) => ({repo, commits}))
+      .sort((a, b) => b.commits - a.commits).slice(0, 10);
+  }
+});
+
+dash.onData(() => {
+  const ok = (id) => { const d = dash.data(id); return d && d.status === 'ok' ? d.data : null; };
+  const int = d3.format(',d'), usd = d3.format('$,.0f'), compact = new Intl.NumberFormat('en', {notation: 'compact', maximumFractionDigits: 1});
+  const fmts = {cost: usd, box_cost: usd, out_tokens: (v) => compact.format(v), msgs: int, sessions: int, commits: int, uses: int, days_active: int};
+
+  const sum = ok('summary');
+  document.querySelectorAll('[data-source="summary"][data-field]').forEach((el) => {
+    const f = el.dataset.field;
+    const v = sum && sum[0] ? sum[0][f] : null;
+    el.textContent = v == null ? '–' : (fmts[f] ? fmts[f](v) : String(v));
+  });
+
+  document.querySelectorAll('[data-source="board_counts"][data-field]').forEach((el) => {
+    const bc = ok('board_counts');
+    const v = bc && bc[0] ? bc[0][el.dataset.field] : null;
+    el.textContent = v == null ? '–' : int(v);
+  });
+  const mk = (tag, cls, txt) => { const e = document.createElement(tag); if (cls) e.className = cls; if (txt != null) e.textContent = txt; return e; };
+  const needsT = document.querySelector('#cd-needs tbody'), nrows = ok('needs');
+  needsT.textContent = '';
+  if (!nrows || !nrows.length) { const td = needsT.insertRow().insertCell(); td.colSpan = 3; td.className = 'cd-empty'; td.textContent = 'Nothing needs Dat'; }
+  else for (const r of nrows) {
+    const tr = needsT.insertRow(); tr.dataset.key = r.item;
+    const a = tr.insertCell(); a.dataset.field = 'item'; a.style.fontWeight = '600'; a.textContent = r.item;
+    const b = tr.insertCell(); b.dataset.field = 'detail'; b.className = 'cd-d'; b.textContent = r.detail;
+    const c = tr.insertCell(); c.dataset.field = 'area'; c.appendChild(mk('span', 'cd-chip', r.area));
+  }
+  const bt = document.querySelector('#cd-board tbody'), brows = ok('board');
+  bt.textContent = '';
+  if (!brows || !brows.length) { const td = bt.insertRow().insertCell(); td.className = 'cd-empty'; td.textContent = 'No sessions'; }
+  else {
+    const cmp = (x, y) => String(y.active) < String(x.active) ? -1 : String(y.active) > String(x.active) ? 1 : 0;
+    const sorted = brows.slice().sort((x, y) => ((y.state === 'running') - (x.state === 'running')) || cmp(x, y));
+    for (const r of sorted) {
+      const tr = bt.insertRow(); tr.className = 'cd-card'; tr.dataset.key = r.id;
+      const cell = (f, el) => { const td = tr.insertCell(); td.dataset.field = f; td.style.cssText = 'display:block;border:0;padding:0'; td.appendChild(el); return td; };
+      cell('goal', mk('div', 'cd-goal', r.goal));
+      const run = r.state === 'running';
+      const meta = mk('div', 'cd-row');
+      const mt = tr.insertCell(); mt.style.cssText = 'display:block;border:0;padding:0';
+      const wrap = (f, el) => { const sp = mk('span'); sp.dataset.field = f; sp.appendChild(el); meta.appendChild(sp); };
+      wrap('project', mk('span', 'cd-chip', r.project));
+      if (r.branch) wrap('branch', mk('span', 'cd-chip', r.branch));
+      wrap('state', mk('span', 'cd-pill' + (run ? ' run' : ''), run ? 'running' : 'idle'));
+      wrap('idle_minutes', mk('span', null, run ? 'now' : 'idle ' + int(r.idle_minutes || 0) + ' min'));
+      wrap('prompts', mk('span', null, 'prompts ' + int(r.prompts || 0)));
+      mt.appendChild(meta);
+      const lw = mk('div');
+      lw.appendChild(mk('div', 'cd-lbl', 'Latest status'));
+      lw.appendChild(mk('div', 'cd-last', r.last));
+      cell('last', lw);
+    }
+  }
+
+  const fillTable = (id, rows, key, cols) => {
+    const tb = document.querySelector('#' + id + ' tbody');
+    tb.textContent = '';
+    if (!rows || !rows.length) {
+      const tr = tb.insertRow(), td = tr.insertCell();
+      td.colSpan = cols.length; td.className = 'cd-empty'; td.textContent = 'No data';
+      return;
+    }
+    for (const r of rows) {
+      const tr = tb.insertRow();
+      tr.dataset.key = key.map((k) => r[k]).join(',');
+      for (const c of cols) {
+        const td = tr.insertCell();
+        if (fmts[c]) td.className = 'cd-n';
+        td.textContent = fmts[c] ? fmts[c](r[c]) : String(r[c]);
+      }
+    }
+  };
+  fillTable('cd-projects', ok('projects'), ['project'], ['project', 'source', 'sessions', 'msgs', 'cost']);
+  fillTable('cd-models', ok('models'), ['model'], ['model', 'msgs', 'cost']);
+  fillTable('cd-tools', ok('tools'), ['tool'], ['tool', 'uses']);
+  fillTable('cd-commits', ok('commits_by_repo'), ['repo'], ['repo', 'commits']);
+
+  const bars = (id, rows, field, fmt, color) => {
+    const box = document.getElementById(id);
+    box.textContent = '';
+    if (!rows || !rows.length) {
+      const e = document.createElement('div'); e.className = 'cd-empty'; e.textContent = 'No data'; box.appendChild(e); return;
+    }
+    const W = box.clientWidth || 480, H = 220;
+    const probe = rows.map((r) => fmt(r[field]));
+    const tmp = d3.select(box).append('svg').attr('width', 0).attr('height', 0);
+    const tw = d3.max(probe, (s) => { const t = tmp.append('text').text(s); const w = t.node().getComputedTextLength ? t.node().getComputedTextLength() : s.length * 6; t.remove(); return w; }) || 30;
+    tmp.remove();
+    const m = {top: 8, right: 8, bottom: 24, left: Math.ceil(tw) + 12};
+    const x = d3.scaleBand().domain(rows.map((r) => r.date)).range([m.left, W - m.right]).padding(0.2);
+    const y = d3.scaleLinear().domain([0, d3.max(rows, (r) => r[field]) || 1]).nice().range([H - m.bottom, m.top]);
+    const svg = d3.select(box).append('svg').attr('viewBox', `0 0 ${W} ${H}`).attr('width', '100%');
+    svg.append('g').attr('transform', `translate(${m.left},0)`).call(d3.axisLeft(y).ticks(4).tickFormat(fmt));
+    const every = Math.ceil(rows.length / Math.max(1, Math.floor((W - m.left) / 60)));
+    svg.append('g').attr('transform', `translate(0,${H - m.bottom})`)
+      .call(d3.axisBottom(x).tickValues(x.domain().filter((_, i) => i % every === 0)).tickFormat((d) => d.slice(5)));
+    const tip = d3.select(box).append('div').attr('class', 'cd-tip');
+    svg.selectAll('rect.b').data(rows).join('rect').attr('class', 'b')
+      .attr('x', (r) => x(r.date)).attr('width', x.bandwidth())
+      .attr('y', (r) => y(r[field])).attr('height', (r) => y(0) - y(r[field]))
+      .attr('fill', color)
+      .on('mouseenter mousemove', (ev, r) => {
+        const b = box.getBoundingClientRect();
+        tip.style('display', 'block').text(`${r.date}: ${fmt(r[field])}`)
+          .style('left', Math.min(ev.clientX - b.left + 10, b.width - 120) + 'px')
+          .style('top', Math.max(0, ev.clientY - b.top - 30) + 'px');
+      })
+      .on('mouseleave', () => tip.style('display', 'none'));
+  };
+  const daily = ok('daily_total');
+  const colors = dash.colors || [];
+  bars('cd-cost', daily, 'cost', usd, colors[0] || 'var(--cds-chart-1, steelblue)');
+  bars('cd-sess', daily, 'sessions', int, colors[1] || colors[0] || 'var(--cds-chart-2, teal)');
+});
+</script>

@@ -1,0 +1,1 @@
+{ "name": "no-attrib", "version": "0.1.0", "description": "Strip Claude attribution trailers and footers from commits, PRs and GitHub posts" }

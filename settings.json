@@ -1,0 +1,321 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "cleanupPeriodDays": 90,
+  "syncClaudeAiSkills": false,
+  "env": {
+    "CLAUDE_CODE_PROMPT_CACHE_TTL": "1h",
+    "BASH_DEFAULT_TIMEOUT_MS": "300000",
+    "BASH_MAX_TIMEOUT_MS": "1800000",
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/no-attrib:~/.claude/mods/lean-notes:~/.claude/mods/lean-start"
+  },
+  "permissions": {
+    "deny": [
+      "NotebookEdit",
+      "Agent(fork)",
+      "RemoteTrigger",
+      "DesignSync",
+      "SearchPlugins",
+      "SuggestPluginInstall",
+      "SuggestSkills",
+      "mcp__visualize",
+      "mcp__mcp-registry",
+      "mcp__ccd_sidebar",
+      "mcp__ccd_connectors",
+      "mcp__ccd_window",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "ArtifactComments",
+      "CronList",
+      "EnterWorktree",
+      "ExitWorktree",
+      "PushNotification",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "ShowOnboardingRolePicker",
+      "SearchMcpRegistry",
+      "SuggestConnectors",
+      "ListConnectors",
+      "ListPlugins",
+      "ListSkills",
+      "SearchSkills",
+      "CronCreate",
+      "CronDelete"
+    ],
+    "ask": [
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git push --delete *)"
+    ],
+    "defaultMode": "auto"
+  },
+  "model": "sonnet",
+  "skillOverrides": {
+    "session-start-hook": "off"
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/preflight.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-link.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/session.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/asks_hook.py",
+            "timeout": 10
+          }
+        ]
+      },
+      {
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-state.sh show",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/progress-log.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/postedit.py",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/repeats_hint.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "mcp__github__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-attrib.sh",
+            "timeout": 5,
+            "onFailure": "block"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-attrib.sh bash",
+            "timeout": 5,
+            "onFailure": "block",
+            "if": "Bash(*laude*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-attrib.sh bash-upper",
+            "timeout": 5,
+            "onFailure": "block",
+            "if": "Bash(*LAUDE*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh timeout",
+            "timeout": 5,
+            "if": "Bash(*timeout *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh watch",
+            "timeout": 5,
+            "if": "Bash(*watch*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh tail",
+            "timeout": 5,
+            "if": "Bash(*tail *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh pkill",
+            "timeout": 5,
+            "if": "Bash(*pkill *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh pgrep",
+            "timeout": 5,
+            "if": "Bash(*pgrep *)"
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/pretool.py",
+            "timeout": 10,
+            "onFailure": "block"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-state.sh save",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/compact.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/asks_hook.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/stop.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/permission-denied.sh",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  },
+  "enableArtifact": true,
+  "enableWorkflows": true,
+  "enabledPlugins": {
+    "slim-tools@dat-mods": true
+  },
+  "extraKnownMarketplaces": {
+    "dat-mods": {
+      "source": {
+        "source": "directory",
+        "path": "/home/OMISTAJA/claude-mods"
+      }
+    }
+  },
+  "outputStyle": "terse",
+  "sandbox": {
+    "enabled": true
+  },
+  "theme": "dark",
+  "agentPushNotifEnabled": false,
+  "tui": "fullscreen",
+  "autoCompactWindow": 200000,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false,
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Running pytest, ruff or the repo's own gate on files in the working tree or the session scratchpad",
+      "Creating, filling and deleting scratch directories under the session scratchpad or $TMPDIR, including a scratch HOME with a copy of ~/.claude/agents for hook tests",
+      "Running `claude -p` with --settings and --setting-sources \"\" against a scratch HOME to test hooks"
+    ],
+    "environment": [
+      "$defaults",
+      "This repo is Dat's own Claude Code config; hooks/ and settings.json here are installed into ~/.claude by cloud-setup.sh, and editing them in the working tree is the task, not self-modification"
+    ]
+  }
+}

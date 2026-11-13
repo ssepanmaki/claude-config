@@ -1,0 +1,20 @@
+<!doctype html><meta charset="utf-8">
+<style>html,body{margin:0;background:#d9d7cf;font:500 14px/20px system-ui,sans-serif;color:#14213d;overflow:hidden}
+.row{display:flex;gap:24px;padding:24px;align-items:flex-start}.it{flex:none}.lab{height:24px;white-space:nowrap;overflow:hidden}
+.box{overflow:hidden;position:relative;background:#fff}iframe{border:0;display:block;transform-origin:0 0;position:absolute;left:0;top:0}
+.sq iframe{filter:blur(var(--b)) grayscale(1)}</style>
+<div class="row" id="row"></div>
+<script>
+// items: JSON [{u,W,H,x,y,w,h,label}], z: scale, sq: squint blur px (0 = off)
+const q = new URLSearchParams(location.search), items = JSON.parse(q.get('items')), z = +(q.get('z') || 1), sq = +(q.get('sq') || 0);
+const row = document.getElementById('row');
+for (const it of items) {
+  const d = document.createElement('div'); d.className = 'it' + (sq ? ' sq' : ''); d.style.setProperty('--b', sq + 'px');
+  d.innerHTML = '<div class="lab"></div><div class="box"></div>';
+  d.querySelector('.lab').textContent = it.label; d.querySelector('.lab').style.width = it.w * z + 'px';
+  const b = d.querySelector('.box'); b.style.width = it.w * z + 'px'; b.style.height = it.h * z + 'px';
+  const f = document.createElement('iframe'); f.src = it.u; f.width = it.W; f.height = it.H;
+  f.style.transform = `scale(${z}) translate(${-it.x}px,${-it.y}px)`;
+  b.appendChild(f); row.appendChild(d);
+}
+</script>
