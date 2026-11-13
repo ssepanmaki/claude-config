@@ -11,6 +11,16 @@
 
 Guard tests now read these thresholds from `pretool.*` instead of hard-coding them (152 pass).
 
+## Applied from research (verified with `claude -p` 2.1.323)
+| Change | Verified how |
+|---|---|
+| `curl` with no timeout is now rewritten (`updatedInput`, adds `-m 30`) instead of refused | Real harness + real `pretool.py` hook: a fake `curl` on PATH received `-m 30 http://example.invalid/x` |
+| `onFailure: "block"` on the `pretool.py` and `no-attrib.sh` hooks | Crashing hook (`exit 1`): without the field the Bash call ran; with it the call was blocked |
+
+Not applied: hook `if` filters. They take one permission rule per hook, but `no-attrib.sh` must cover Bash and GitHub MCP calls and `no-wait.sh` matches `sleep|timeout|watch|tail -f|pkill` anywhere in a chain; narrowing them would weaken the guard for little gain. `onFailure` was left off `Stop`/`PostToolUse` hooks: a crashing guard there would trap or stall the session.
+
+Still open from research: `autoMode` classifier rules, `PermissionDenied`/`PostCompact`/`SubagentStop` events, `permissions.blockWritesOutsideWorkingDirectories`, `sandbox.failIfUnavailable`.
+
 ## Left strict on purpose
 Opus-agent ban, `general-purpose` auto-rewrite to `worker`, curl-needs-timeout, heredoc file-write ban, no attribution trailers, rule-deletion refusal, hand-back hedge refusal, suppression (`noqa`, `type: ignore`) nudge, `rm -rf`/force-push gates.
 

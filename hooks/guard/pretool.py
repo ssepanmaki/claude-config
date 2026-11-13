@@ -52,6 +52,8 @@ FIND_HUGE = re.compile(
 )
 CURL = re.compile(r"(?:^|[;&|(\n])\s*curl\s")
 STDIN_CAT = re.compile(r"(?:^|[;&(\n])\s*cat(?:\s+-)?(?=\s*(?:$|[;&)>\n]|\|(?!\|)))(?![^;&|\n]*<)", re.MULTILINE)
+CURL_START = re.compile(r"((?:^|[;&|(\n])\s*curl)(\s)")
+CURL_AUTO_TIMEOUT_S = 30
 CURL_TIMEOUT = re.compile(r"\s(?:--max-time|--connect-timeout|-[A-Za-z]*m)(?=[\s=\d]|$)")
 POLL_LOOP = re.compile(r"^\s*(?:until|while|for)\b[^\n]*?\bdo\b.{0,200}?\b(?:sleep|Start-Sleep)\b", re.IGNORECASE | re.DOTALL | re.MULTILINE)
 SCRATCH_TARGET = re.compile(r"<<[^\n]*>\s*[\"']?(?:/tmp/|[^\s\"']*(?:AppData[/\\]Local[/\\]Temp|scratchpad))", re.IGNORECASE)
@@ -408,8 +410,6 @@ def shell_refusal(params: dict) -> str | None:
             "find over /, ~, the user profile or AppData Temp without -maxdepth banned: it walks a huge tree and hangs. "
             "Allowed: add `-maxdepth N`, or use the Glob tool on a narrow path."
         )
-    if CURL.search(cmd) and not CURL_TIMEOUT.search(cmd):
-        return "curl without a timeout banned: a stalled host hangs the turn. Allowed: add `-m 5` (or --max-time / --connect-timeout)."
     if POLL_LOOP.search(cmd):
         return (
             "Foreground poll loop banned: it blocks the turn. Allowed: the same command with run_in_background: true "
@@ -418,6 +418,14 @@ def shell_refusal(params: dict) -> str | None:
     if any(float(s) > SLEEP_MAX_S for s in SLEEP.findall(cmd)):
         return f"sleep over {SLEEP_MAX_S}s banned. Allowed: `sleep {SLEEP_MAX_S}` or less, or the command with run_in_background: true."
     return None
+
+
+def curl_bounded(tool: str, params: dict) -> dict | None:
+    """Foreground curl with no timeout: params with `-m 30` added (a stalled host would hang the turn), else None."""
+    cmd = str(params.get("command") or "")
+    if tool not in SHELLS or params.get("run_in_background") or not CURL.search(cmd) or CURL_TIMEOUT.search(cmd):
+        return None
+    return {**params, "command": CURL_START.sub(rf"\1 -m {CURL_AUTO_TIMEOUT_S}\2", cmd)}
 
 
 def _big_scale(params: dict) -> bool:
@@ -890,6 +898,10 @@ def decide(event: dict, state: dict) -> dict | None:
     bounded = capped(tool, updated or params)
     updated = bounded or updated
     updated = slotted(tool, updated or params) or updated
+    curled = curl_bounded(tool, updated or params)
+    if curled:
+        updated = curled
+        notes.append(f"curl had no timeout: added -m {CURL_AUTO_TIMEOUT_S}.")
     if tool in common.EDIT_TOOLS:
         notes += [rule_deletion(tool, params, recs), churn_warning(state, tool, params)]
         if tool == "Edit":

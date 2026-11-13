@@ -136,7 +136,8 @@
           {
             "type": "command",
             "command": "sh ~/.claude/hooks/no-attrib.sh",
-            "timeout": 5
+            "timeout": 5,
+            "onFailure": "block"
           }
         ]
       },
@@ -155,7 +156,8 @@
           {
             "type": "command",
             "command": "python3 -I ~/.claude/hooks/guard/pretool.py",
-            "timeout": 10
+            "timeout": 10,
+            "onFailure": "block"
           }
         ]
       }

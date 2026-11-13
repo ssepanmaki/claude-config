@@ -797,9 +797,6 @@ HANG_DENIED = [
     "find /home/OMISTAJA/ -name x",
     "find /c/Users/OMISTAJA/AppData/Local/Temp/claude -name x",
     "find C:\\Users\\OMISTAJA\\AppData\\Local\\Temp -name x",
-    "curl http://localhost:5174/",
-    "curl -s https://example.com/api | jq .",
-    "cd x && curl -sS -o out.json http://a/b",
 ]
 HANG_ALLOWED = [
     "find / -maxdepth 2 -name foo",
@@ -822,6 +819,21 @@ def test_unbounded_find_and_curl_denied(cmd):
 @pytest.mark.parametrize("cmd", HANG_ALLOWED)
 def test_bounded_find_and_curl_allowed(cmd):
     assert pre("Bash", {"command": cmd}) is None
+
+
+@pytest.mark.parametrize(
+    ("cmd", "fixed"),
+    [
+        ("curl http://localhost:5174/", "curl -m 30 http://localhost:5174/"),
+        ("curl -s https://example.com/api | jq .", "curl -m 30 -s https://example.com/api | jq ."),
+        ("cd x && curl -sS -o out.json http://a/b", "cd x && curl -m 30 -sS -o out.json http://a/b"),
+    ],
+)
+def test_curl_without_timeout_gets_one_added(cmd, fixed):
+    out = pre("Bash", {"command": cmd, "description": "d"})
+    assert decision(out) == "allow"
+    assert out["hookSpecificOutput"]["updatedInput"] == {"command": fixed, "description": "d"}
+    assert pre("Bash", {"command": cmd, "run_in_background": True}) is None
 
 
 @pytest.mark.parametrize("cmd", HANG_DENIED)
