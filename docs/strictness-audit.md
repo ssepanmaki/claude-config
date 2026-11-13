@@ -17,9 +17,20 @@ Guard tests now read these thresholds from `pretool.*` instead of hard-coding th
 | `curl` with no timeout is now rewritten (`updatedInput`, adds `-m 30`) instead of refused | Real harness + real `pretool.py` hook: a fake `curl` on PATH received `-m 30 http://example.invalid/x` |
 | `onFailure: "block"` on the `pretool.py` and `no-attrib.sh` hooks | Crashing hook (`exit 1`): without the field the Bash call ran; with it the call was blocked |
 
-Not applied: hook `if` filters. They take one permission rule per hook, but `no-attrib.sh` must cover Bash and GitHub MCP calls and `no-wait.sh` matches `sleep|timeout|watch|tail -f|pkill` anywhere in a chain; narrowing them would weaken the guard for little gain. `onFailure` was left off `Stop`/`PostToolUse` hooks: a crashing guard there would trap or stall the session.
+| Hook `if` filters on `no-wait.sh` (6 entries) and `no-attrib.sh` (Bash entries) | Probe: `if: "Bash(*sleep *)"` ran only for commands containing `sleep`, also inside `a; b` / `a && b`. Full settings: `echo` spawned neither script; `sleep 200`, `timeout 5 ls` and a `Co-Authored-By: Claude` commit were still blocked |
+| `autoMode` block (`$defaults` + allow for test scratch/pytest, environment note that this repo is the config) | Schema keys read from the 2.1.323 binary; classifier behavior itself unverified (needs a real auto-mode denial) |
+| `PermissionDenied` hook `permission-denied.sh`: retry only plain read-only commands | Unit-tested by piping JSON (`git status`, `ls` retry; chains, redirects, `rm`, non-Bash do not); not fired by a real denial |
 
-Still open from research: `autoMode` classifier rules, `PermissionDenied`/`PostCompact`/`SubagentStop` events, `permissions.blockWritesOutsideWorkingDirectories`, `sandbox.failIfUnavailable`.
+`if` takes one rule, so each script has one entry per pattern, with a distinct trailing arg so identical commands are not merged. `no-attrib.sh` keeps an unfiltered `mcp__github__.*` entry.
+
+Not applied, with reason:
+- `sandbox.failIfUnavailable`: probed here, the session refuses to start (no bwrap/socat), so it would brick cloud sessions.
+- `permissions.blockWrites/ReadsOutsideWorkingDirectories`: the ship flow works in fresh worktrees and cloud-setup writes `~/.claude`, both outside the working directory.
+- `sandbox.network.allowedDomains`: needs a domain list and cannot be tested without bwrap.
+- `autoMode.classifyAllShell`: sends every shell call to the classifier, the opposite of fewer denials.
+- `PostCompact`, `SubagentStop`, `PostToolBatch`, `InstructionsLoaded`: no job yet (`SessionStart:compact` already re-injects state).
+- Moving guard regexes to `permissions.deny`: the rules carry exceptions (`HEREDOC_OK`, `-maxdepth`, bracketed `pkill`) that a deny glob cannot express.
+- `onFailure` on Stop/PostToolUse hooks: a crashing guard there would trap or stall the session.
 
 ## Left strict on purpose
 Opus-agent ban, `general-purpose` auto-rewrite to `worker`, curl-needs-timeout, heredoc file-write ban, no attribution trailers, rule-deletion refusal, hand-back hedge refusal, suppression (`noqa`, `type: ignore`) nudge, `rm -rf`/force-push gates.

@@ -131,7 +131,7 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Bash|mcp__github__.*",
+        "matcher": "mcp__github__.*",
         "hooks": [
           {
             "type": "command",
@@ -146,8 +146,88 @@
         "hooks": [
           {
             "type": "command",
-            "command": "sh ~/.claude/hooks/no-wait.sh",
-            "timeout": 5
+            "command": "sh ~/.claude/hooks/no-attrib.sh bash",
+            "timeout": 5,
+            "onFailure": "block",
+            "if": "Bash(*laude*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-attrib.sh bash-upper",
+            "timeout": 5,
+            "onFailure": "block",
+            "if": "Bash(*LAUDE*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh sleep",
+            "timeout": 5,
+            "if": "Bash(*sleep *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh timeout",
+            "timeout": 5,
+            "if": "Bash(*timeout *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh watch",
+            "timeout": 5,
+            "if": "Bash(*watch*)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh tail",
+            "timeout": 5,
+            "if": "Bash(*tail *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh pkill",
+            "timeout": 5,
+            "if": "Bash(*pkill *)"
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh pgrep",
+            "timeout": 5,
+            "if": "Bash(*pgrep *)"
           }
         ]
       },
@@ -199,6 +279,17 @@
           }
         ]
       }
+    ],
+    "PermissionDenied": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/permission-denied.sh",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   },
   "enableArtifact": true,
@@ -226,5 +317,17 @@
     "commit": "",
     "pr": ""
   },
-  "includeCoAuthoredBy": false
+  "includeCoAuthoredBy": false,
+  "autoMode": {
+    "allow": [
+      "$defaults",
+      "Running pytest, ruff or the repo's own gate on files in the working tree or the session scratchpad",
+      "Creating, filling and deleting scratch directories under the session scratchpad or $TMPDIR, including a scratch HOME with a copy of ~/.claude/agents for hook tests",
+      "Running `claude -p` with --settings and --setting-sources \"\" against a scratch HOME to test hooks"
+    ],
+    "environment": [
+      "$defaults",
+      "This repo is Dat's own Claude Code config; hooks/ and settings.json here are installed into ~/.claude by cloud-setup.sh, and editing them in the working tree is the task, not self-modification"
+    ]
+  }
 }
