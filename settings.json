@@ -65,10 +65,6 @@
           {
             "type": "command",
             "command": "bash ~/.claude/hooks/sync.sh"
-          },
-          {
-            "type": "command",
-            "command": "bash ~/.claude/hooks/issues.sh"
           }
         ]
       }
@@ -91,6 +87,16 @@
           {
             "type": "command",
             "command": "bash ~/.claude/hooks/format.sh"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/tasks-gate.sh"
           }
         ]
       }
