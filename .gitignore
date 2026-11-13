@@ -1,3 +1,19 @@
+# This folder is ~/.claude: track only the config, never Claude's runtime state (credentials, transcripts, history, caches).
+/*
+!/.gitignore
+!/CLAUDE.md
+!/README.md
+!/settings.json
+!/cloud-setup.sh
+!/install.sh
+!/docs/
+!/rules/
+!/agents/
+!/skills/
+!/hooks/
+!/mods/
+!/output-styles/
+!/tools/
 __pycache__/
 *.pyc
 skills/.trash/

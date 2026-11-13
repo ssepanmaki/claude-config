@@ -1,5 +1,11 @@
 # claude-config
 
+## Install (this repo is `~/.claude`)
+```
+git clone https://github.com/ssepanmaki/claude-config ~/.claude && ~/.claude/install.sh
+```
+`install.sh` checks python3/jq/git (ruff, pytest, node optional), points git's `core.hooksPath` at `hooks/git` (no attribution trailers in any repo), aliases `/home/OMISTAJA`, smoke-tests the gates and runs the guard tests. It prints `ready` or `NOT ready`. `.gitignore` is an allowlist, so credentials, transcripts and history in `~/.claude` are never tracked. Cloud sessions use `cloud-setup.sh` instead.
+
 Personal `~/.claude` config: terse rules, hook-enforced guards, delegation agents, skills.
 
 | Path | Purpose |
