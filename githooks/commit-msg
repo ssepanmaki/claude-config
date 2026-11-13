@@ -1,0 +1,3 @@
+#!/bin/bash
+sed -i -E '/^(Co-Authored-By:|Claude-Session:|🤖 Generated with|Generated with \[?Claude)/Id' "$1"
+sed -i -e :a -e '/^\n*$/{$d;N;ba' -e '}' "$1"
