@@ -1,47 +1,228 @@
 {
-  "$schema": "https://json-schema.org/claude-code-settings.json",
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "cleanupPeriodDays": 90,
+  "syncClaudeAiSkills": false,
   "env": {
-    "DISABLE_TELEMETRY": "1",
-    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1"
+    "CLAUDE_CODE_PROMPT_CACHE_TTL": "1h",
+    "BASH_DEFAULT_TIMEOUT_MS": "300000",
+    "BASH_MAX_TIMEOUT_MS": "1800000",
+    "ENABLE_TOOL_SEARCH": "true",
+    "CLAUDE_CODE_AUTO_COMPACT_WINDOW": "200000",
+    "CLAUDE_CODE_PLUGIN_DIRS": "~/.claude/mods/no-attrib:~/.claude/mods/lean-notes:~/.claude/mods/lean-start"
   },
-  "includeCoAuthoredBy": true,
   "permissions": {
-    "defaultMode": "default",
-    "allow": [
-      "Bash(git status:*)", "Bash(git diff:*)", "Bash(git log:*)", "Bash(git show:*)",
-      "Bash(git branch:*)", "Bash(git fetch:*)", "Bash(git add:*)", "Bash(git stash:*)",
-      "Bash(ls:*)", "Bash(pwd)", "Bash(wc:*)", "Bash(which:*)", "Bash(tree:*)",
-      "Bash(npm test:*)", "Bash(npm run test:*)", "Bash(npm run lint:*)", "Bash(npm run build:*)", "Bash(npm run typecheck:*)",
-      "Bash(bun test:*)", "Bash(bun run test:*)", "Bash(bun run lint:*)", "Bash(bun run typecheck:*)", "Bash(bun run build:*)",
-      "Bash(pytest:*)", "Bash(python -m pytest:*)", "Bash(ruff check:*)", "Bash(mypy:*)",
-      "Bash(cargo test:*)", "Bash(cargo check:*)", "Bash(cargo clippy:*)", "Bash(go test:*)", "Bash(go vet:*)",
-      "Bash(shellcheck:*)", "Bash(jq:*)"
+    "deny": [
+      "AskUserQuestion",
+      "NotebookEdit",
+      "Agent(fork)",
+      "RemoteTrigger",
+      "DesignSync",
+      "SearchPlugins",
+      "SuggestPluginInstall",
+      "SuggestSkills",
+      "mcp__visualize",
+      "mcp__mcp-registry",
+      "mcp__ccd_sidebar",
+      "mcp__ccd_connectors",
+      "mcp__ccd_window",
+      "Read(./.env)",
+      "Read(./.env.*)",
+      "Read(~/.ssh/**)",
+      "Read(~/.aws/**)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "ArtifactComments",
+      "CronList",
+      "EnterWorktree",
+      "ExitWorktree",
+      "PushNotification",
+      "ReportFindings",
+      "ScheduleWakeup",
+      "ShowOnboardingRolePicker",
+      "SearchMcpRegistry",
+      "SuggestConnectors",
+      "ListConnectors",
+      "ListPlugins",
+      "ListSkills",
+      "SearchSkills",
+      "CronCreate",
+      "CronDelete"
     ],
     "ask": [
-      "Bash(git commit:*)", "Bash(git push:*)", "Bash(git merge:*)", "Bash(git rebase:*)",
-      "Bash(git reset:*)", "Bash(git checkout -- :*)", "Bash(git clean:*)",
-      "Bash(npm install:*)", "Bash(npm publish:*)", "Bash(pip install:*)",
-      "Bash(docker:*)", "Bash(kubectl:*)", "Bash(terraform apply:*)"
+      "Bash(rm -rf *)",
+      "Bash(rm -fr *)",
+      "Bash(git reset --hard *)",
+      "Bash(git clean *)",
+      "Bash(git push --delete *)"
     ],
-    "deny": [
-      "Bash(rm -rf /:*)", "Bash(rm -rf ~:*)", "Bash(sudo:*)",
-      "Bash(git push --force:*)", "Bash(git push -f:*)", "Bash(git push * --force:*)",
-      "Bash(git commit --no-verify:*)", "Bash(git commit -n:*)",
-      "Bash(curl * | sh:*)", "Bash(curl * | bash:*)", "Bash(wget * | sh:*)",
-      "Read(./.env)", "Read(./.env.*)", "Read(**/*.pem)", "Read(**/*.key)", "Read(**/id_rsa*)", "Read(~/.ssh/**)", "Read(~/.aws/**)",
-      "Edit(./.env)", "Edit(./.env.*)", "Write(./.env)", "Write(./.env.*)"
-    ]
+    "defaultMode": "auto"
+  },
+  "model": "sonnet",
+  "skillOverrides": {
+    "session-start-hook": "off"
   },
   "hooks": {
-    "PreToolUse": [
+    "SessionStart": [
       {
-        "matcher": "Bash",
-        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/guard-bash.sh" }]
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/preflight.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-link.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/session.py",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/asks_hook.py",
+            "timeout": 10
+          }
+        ]
       },
       {
-        "matcher": "Write|Edit",
-        "hooks": [{ "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/hooks/guard-secrets.sh" }]
+        "matcher": "compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-state.sh show",
+            "timeout": 15
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/progress-log.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Edit|Write|MultiEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/postedit.py",
+            "timeout": 30
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/repeats_hint.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Bash|mcp__github__.*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-attrib.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "matcher": "Bash",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/no-wait.sh",
+            "timeout": 5
+          }
+        ]
+      },
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/pretool.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "sh ~/.claude/hooks/session-state.sh save",
+            "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/compact.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/asks_hook.py",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python3 -I ~/.claude/hooks/guard/stop.py",
+            "timeout": 10
+          }
+        ]
       }
     ]
-  }
+  },
+  "enableArtifact": true,
+  "enableWorkflows": true,
+  "enabledPlugins": {
+    "slim-tools@dat-mods": true
+  },
+  "extraKnownMarketplaces": {
+    "dat-mods": {
+      "source": {
+        "source": "directory",
+        "path": "/home/OMISTAJA/claude-mods"
+      }
+    }
+  },
+  "outputStyle": "terse",
+  "sandbox": {
+    "enabled": true
+  },
+  "theme": "dark",
+  "agentPushNotifEnabled": false,
+  "tui": "fullscreen",
+  "autoCompactWindow": 200000,
+  "attribution": {
+    "commit": "",
+    "pr": ""
+  },
+  "includeCoAuthoredBy": false
 }

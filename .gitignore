@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+skills/.trash/
+skills/synced/
+*.db
+tools/.shot-review-*/

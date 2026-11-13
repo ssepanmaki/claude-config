@@ -1,0 +1,14 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Card render</title>
+<div id="root" style="display:none"></div>
+<script src="https://adaptivecards.microsoft.com/main.bundle.js"></script>
+<script type="module">
+  import { render } from "./render.mjs";
+  window.render = render;
+  const params = new URLSearchParams(location.search);
+  if (params.get("card")) {
+    await new Promise((r) => setTimeout(r, 1500));
+    await render(params.get("card"), { theme: params.get("theme") ?? "light", width: Number(params.get("width") ?? 520) });
+  }
+</script>

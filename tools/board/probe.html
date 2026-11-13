@@ -1,0 +1,151 @@
+<!doctype html><meta charset="utf-8"><title>probe</title>
+<style>html,body{margin:0}iframe{border:0;display:block}</style>
+<pre id="out"></pre>
+<script>
+// Loads a board 1:1 in a same-origin iframe, measures every frame, writes JSON into #out.
+// Query: u=board url, w,h=board size, pal=comma list of palette hexes (no #).
+const q = new URLSearchParams(location.search);
+const W = +q.get('w'), H = +q.get('h');
+const PAL = (q.get('pal') || '').split(',').filter(Boolean).map(hex2rgb);
+const fr = document.createElement('iframe');
+fr.width = W; fr.height = H; fr.src = q.get('u');
+document.body.prepend(fr);
+let done = false;
+fr.onload = () => {
+  const d = fr.contentDocument;
+  const go = () => { if (!done) { done = true; setTimeout(() => out(run(d)), 300); } };
+  (d.fonts ? d.fonts.ready : Promise.resolve()).then(go);
+  setTimeout(go, 2500);
+};
+function out(r) { document.getElementById('out').textContent = JSON.stringify(r); }
+
+function hex2rgb(h) { h = h.replace('#', ''); if (h.length === 3) h = h.replace(/./g, c => c + c); const n = parseInt(h, 16); return [n >> 16 & 255, n >> 8 & 255, n & 255]; }
+function rgb(s) { const m = /rgba?\(([^)]+)\)/.exec(s || ''); if (!m) return null; const p = m[1].split(/[ ,\/]+/).filter(Boolean).map(Number); if (p.length > 3 && p[3] === 0) return null; return p.slice(0, 3); }
+const hex = c => '#' + c.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+const R = r => [Math.round(r.left), Math.round(r.top), Math.round(r.width), Math.round(r.height)];
+const inter = (a, b) => Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) * Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+const lum = c => { const f = v => { v /= 255; return v <= .03928 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4; }; return .2126 * f(c[0]) + .7152 * f(c[1]) + .0722 * f(c[2]); };
+const contrast = (a, b) => { const x = lum(a), y = lum(b); return (Math.max(x, y) + .05) / (Math.min(x, y) + .05); };
+const sat = c => { const mx = Math.max(...c), mn = Math.min(...c); return mx ? (mx - mn) / mx : 0; };
+const short = t => t.replace(/\s+/g, ' ').trim().slice(0, 60);
+
+function allEls(root) { const a = []; const walk = n => { for (const c of n.children) { a.push(c); if (c.shadowRoot) walk(c.shadowRoot); walk(c); } }; walk(root); return a; }
+
+function run(d) {
+  const win = d.defaultView, els = allEls(d.body);
+  const cs = e => win.getComputedStyle(e);
+  // Frames: each column holds a Cormorant title (h1-h3) and a big box under it.
+  const titles = els.filter(e => /^H[1-3]$/.test(e.tagName));
+  const frames = [];
+  for (const t of titles) {
+    if (frames.some(f => f.el.contains(t))) continue;
+    let col = t.parentElement; while (col && col.parentElement && col.getBoundingClientRect().height < 300) col = col.parentElement;
+    if (!col) continue;
+    const head = t.parentElement;
+    let best = null, ba = 0;
+    for (const c of col.children) { if (c === head || c.contains(t)) continue; const r = c.getBoundingClientRect(); if (r.width * r.height > ba) { ba = r.width * r.height; best = c; } }
+    if (!best || ba < 200 * 200) continue;
+    if (frames.some(f => f.el === best)) continue;
+    const cap = head.querySelector('p');
+    frames.push({ el: best, title: short(t.textContent), caption: cap ? cap.textContent.replace(/\s+/g, ' ').trim() : '', head, col });
+  }
+  const res = { board: q.get('u'), W, H, frames: [] };
+  frames.forEach((f, i) => res.frames.push(probe(f, i)));
+  return res;
+
+  function probe(f, i) {
+    const F = f.el.getBoundingClientRect(), C = f.col.getBoundingClientRect();
+    const issues = [], add = (sev, check, what, r) => issues.push({ sev, check, what, rect: r ? R(r) : undefined });
+    const inF = els.filter(e => f.el.contains(e) || e === f.el);
+    // --- text
+    const texts = [];
+    const tw = d.createTreeWalker(f.el, NodeFilter.SHOW_TEXT);
+    for (let n; (n = tw.nextNode());) {
+      if (!n.textContent.trim()) continue;
+      const e = n.parentElement, s = cs(e);
+      if (s.visibility === 'hidden' || s.display === 'none' || +s.opacity === 0) continue;
+      const rg = d.createRange(); rg.selectNodeContents(n); const r = rg.getBoundingClientRect();
+      if (r.width < 1 || r.height < 1) continue;
+      let fs = parseFloat(s.fontSize), svg = e.closest('svg');
+      if (svg && svg.getScreenCTM) { const m = svg.getScreenCTM(); if (m) fs *= Math.hypot(m.a, m.b); }
+      const serif = /Cormorant/i.test(s.fontFamily), it = s.fontStyle === 'italic';
+      texts.push({ n, e, r, fs: Math.round(fs * 10) / 10, serif, it, svg: !!svg, color: rgb(s.color || s.fill), t: short(n.textContent) });
+    }
+    for (const x of texts) {
+      if (x.fs < 11) add('high', 'type floor', `${x.fs}px under 11: "${x.t}"`, x.r);
+      else if (x.fs < 13 && !x.serif) add('med', 'type floor', `${x.fs}px UI text under 13: "${x.t}"`, x.r);
+      if (/^H[1-3]$/.test(x.e.tagName) && x.fs < 20) add('med', 'type floor', `title ${x.fs}px under 20: "${x.t}"`, x.r);
+      if (x.r.left < F.left - 1 || x.r.right > F.right + 1 || x.r.top < F.top - 1 || x.r.bottom > F.bottom + 1) add('high', 'clip', `text past frame edge: "${x.t}"`, x.r);
+      if (/lorem|ipsum|\bitem \d|placeholder|\bTODO\b|xxx/i.test(x.t)) add('high', 'placeholder', `"${x.t}"`, x.r);
+      if (/\bvous\b|\bvotre\b|\bvos\b/i.test(x.t)) add('med', 'copy', `vous, not tu: "${x.t}"`, x.r);
+      if (/\b(the|your|and|settings|delete|cancel|save)\b/i.test(x.t)) add('med', 'copy', `English in the UI: "${x.t}"`, x.r);
+    }
+    for (let a = 0; a < texts.length; a++) for (let b = a + 1; b < texts.length; b++) {
+      const A = texts[a], B = texts[b]; const o = inter(A.r, B.r);
+      if (o > 6 && o > .15 * Math.min(A.r.width * A.r.height, B.r.width * B.r.height)) add('high', 'overlap', `"${A.t}" collides with "${B.t}"`, A.r);
+    }
+    // clipped containers (overflow hidden that hides text)
+    for (const e of inFrameTextBoxes()) add('high', 'clip', `text cut by its box: "${short(e.textContent)}"`, e.getBoundingClientRect());
+    function inFrameTextBoxes() { return inF.filter(e => { const s = cs(e); return e !== f.el && /hidden|clip/.test(s.overflow + s.overflowX) && (e.scrollWidth > e.clientWidth + 2 || s.textOverflow === 'ellipsis') && e.textContent.trim() && e.getBoundingClientRect().height < 120; }); }
+    // text over art: text rect on an svg shape that is not a full background
+    const shapes = inF.filter(e => (e instanceof win.SVGGeometryElement && e.tagName !== 'rect') || e.tagName === 'image').map(e => ({ e, r: e.getBoundingClientRect() })).filter(s => s.r.width * s.r.height > 4 && s.r.width * s.r.height < .05 * F.width * F.height);
+    const svgRects = inF.filter(e => e.tagName === 'svg').map(e => ({ e, r: e.getBoundingClientRect() }));
+    for (const x of texts) { if (x.svg) continue; const hit = shapes.find(s => inter(s.r, x.r) > .3 * x.r.width * x.r.height && !s.e.closest('button,a')); if (hit) add('low', 'text on art', `"${x.t}" sits on a ${hit.e.tagName}`, x.r); }
+    // contrast of HTML text against its nearest painted background
+    for (const x of texts) { if (x.svg || !x.color) continue; const mx = x.r.left + x.r.width / 2, my = x.r.top + x.r.height / 2; if (svgRects.some(s => !s.e.contains(x.e) && mx > s.r.left && mx < s.r.right && my > s.r.top && my < s.r.bottom)) continue; let p = x.e, bg = null; while (p && !bg) { const s = cs(p); bg = rgb(s.backgroundColor); if (!bg && s.backgroundImage !== 'none') break; p = p.parentElement; } if (bg) { const k = contrast(x.color, bg); if (k < 3) add(x.fs >= 20 ? 'low' : 'med', 'contrast', `${k.toFixed(1)}:1 "${x.t}"`, x.r); } }
+    // --- colour
+    const used = new Map();
+    const note = (c, where) => { if (!c) return; const h = hex(c); if (!used.has(h)) used.set(h, { c, where }); };
+    for (const e of inF) {
+      const s = cs(e);
+      if (e instanceof win.SVGElement) { note(rgb(s.fill), e.tagName); note(rgb(s.stroke), e.tagName); if (e.tagName === 'stop') note(rgb(s.stopColor), 'stop'); }
+      else { note(rgb(s.color), e.tagName + ' text'); note(rgb(s.backgroundColor), e.tagName + ' bg'); if (parseFloat(s.borderTopWidth) > 0) note(rgb(s.borderTopColor), e.tagName + ' border'); }
+    }
+    const off = [], reds = [];
+    for (const [h, { c, where }] of used) {
+      if (PAL.length && Math.min(...PAL.map(p => dist(p, c))) > 10) off.push(h + ' (' + where + ')');
+      if (c[0] > 150 && c[1] < 100 && c[2] < 100) reds.push(h + ' (' + where + ')');
+    }
+    if (off.length) add('med', 'palette', 'off-palette: ' + off.slice(0, 12).join(', '));
+    if (reds.length) add('low', 'palette', 'red used, check it is overdue/destructive only: ' + reds.join(', '));
+    // --- buttons and pills
+    const ctrls = inF.filter(e => e.matches('button,a,[role=button]'));
+    const filled = ctrls.filter(e => { const c = rgb(cs(e).backgroundColor); return c && (lum(c) < .45 || sat(c) > .35) && e.getBoundingClientRect().width > 40 && e.textContent.trim(); });
+    if (filled.length > 1) add('med', 'one primary', `${filled.length} filled buttons: ` + filled.map(e => '"' + short(e.textContent) + '"').join(', '), filled[1].getBoundingClientRect());
+    const pills = inF.filter(e => { const s = cs(e), r = e.getBoundingClientRect(); return r.height > 14 && r.height <= 36 && parseFloat(s.borderTopLeftRadius) >= r.height / 2 - 1 && (rgb(s.backgroundColor) || parseFloat(s.borderTopWidth) > 0) && e.textContent.trim() && e.textContent.trim().length < 30; });
+    const rows = {}; for (const p of pills) { const k = Math.round(p.getBoundingClientRect().top / 8); rows[k] = (rows[k] || 0) + 1; }
+    const maxRow = Math.max(0, ...Object.values(rows));
+    if (maxRow > 3) add('med', 'pills', `${maxRow} chips in one row`);
+    // skeleton bars: small textless grey blocks
+    for (const e of inF) { if (e.textContent.trim() || e.children.length) continue; const s = cs(e), r = e.getBoundingClientRect(), c = rgb(s.backgroundColor); if (c && r.height >= 4 && r.height <= 18 && r.width >= 40 && sat(c) < .12 && lum(c) > .2 && lum(c) < .85) add('high', 'placeholder', `skeleton bar ${Math.round(r.width)}x${Math.round(r.height)} ${hex(c)}`, r); }
+    // --- caption
+    if (/\band\b/i.test(f.caption)) add('low', 'one idea', 'caption has "and": ' + f.caption.slice(0, 100));
+    // --- soul signals (measurements, not verdicts)
+    let art = 0, empty = 0, cells = 0; const step = 16, base = f.el, frameBg = rgb(cs(base).backgroundColor) || rgb(cs(base.firstElementChild || base).backgroundColor);
+    for (let y = F.top + step / 2; y < F.bottom; y += step) for (let x = F.left + step / 2; x < F.right; x += step) {
+      cells++; const e = d.elementFromPoint(x, y); if (!e) continue;
+      if (e.closest('svg') || e.tagName === 'IMG' || cs(e).backgroundImage !== 'none') { art++; continue; }
+      const hasText = texts.some(t => x >= t.r.left - 4 && x <= t.r.right + 4 && y >= t.r.top - 4 && y <= t.r.bottom + 4);
+      const bg = rgb(cs(e).backgroundColor);
+      if (!hasText && !e.matches('button,input,a,[role=button]') && (!bg || (frameBg && dist(bg, frameBg) < 6)) && !(parseFloat(cs(e).borderTopWidth) > 0)) empty++;
+    }
+    const sizes = texts.map(t => t.fs).sort((a, b) => a - b), med = sizes[sizes.length >> 1] || 0;
+    const voice = texts.filter(t => t.serif && t.it).sort((a, b) => b.fs - a.fs)[0];
+    const cx = F.left + F.width / 2, centred = texts.filter(t => Math.abs(t.r.left + t.r.width / 2 - cx) < 4 && t.r.width < F.width * .8).length;
+    const svgs = inF.filter(e => e.tagName === 'svg').map(e => e.getBoundingClientRect()).filter(r => r.width * r.height > 0);
+    const bigArt = svgs.length ? Math.max(...svgs.map(r => inter(r, F))) / (F.width * F.height) : 0;
+    const soul = {
+      artShare: +(art / cells).toFixed(2),
+      biggestArt: +bigArt.toFixed(2),
+      emptyPaper: +(empty / cells).toFixed(2),
+      voice: voice ? `${voice.fs}px "${voice.t}"` : 'none',
+      hierarchy: med ? +((sizes[sizes.length - 1] || 0) / med).toFixed(1) : 0,
+      centredShare: texts.length ? +(centred / texts.length).toFixed(2) : 0,
+      textNodes: texts.length,
+      colours: used.size,
+    };
+    return { i, title: f.title, caption: f.caption, column: R(C), frame: R(F), soul, issues };
+  }
+}
+</script>
