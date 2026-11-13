@@ -2,6 +2,7 @@
 name: shipper
 description: Gates, commits and pushes a batch of finished changes once.
 model: haiku
+effort: low
 maxTurns: 40
 tools: Bash, Read, Grep, Glob
 hooks:

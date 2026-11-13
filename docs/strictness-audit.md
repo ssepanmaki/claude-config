@@ -43,3 +43,8 @@ Opus-agent ban, `general-purpose` auto-rewrite to `worker`, curl-needs-timeout, 
 5. `cloud-setup.sh` default repo is now `ssepanmaki/claude-config`.
 6. `/home/OMISTAJA` is aliased to `$HOME` by `cloud-setup.sh`, and `tools/slot.py` ships in this repo: left as is.
 7. `sandbox.network.allowedDomains` skipped; relaxing the other repo skipped.
+
+## Token-saving tips list (3 agents, binary + repo checked)
+- Applied: `effort: low` on `scout` and `shipper` (haiku, mechanical). The agent still loads in a scratch HOME with the field; the effect on tokens is unmeasured.
+- Already done: Grep head_limit, Bash output spill (30000 chars), tool search on, 1h cache TTL, redundant-Read block, all skills `disable-model-invocation`, per-agent models, lean CLAUDE.md (551 words), statusline with ctx and cost.
+- Refuted or skipped: RTK-style Bash output rewriting (hides output, harness already spills); GitHub MCP rule line (the server injects it already); `MAX_MCP_OUTPUT_TOKENS=10000` (default 25000, no bloat seen); `GOAL_CHECKIN_MINUTES=0` (also stops background check-ins); fix-loop cap (looser than "same error twice"); llm-router, ccusage, extra statusline tools (duplicate `tools/statusline.py`); `Explore` override (`scout` covers it); CI action tips (no `.github/`); `autoCompactWindow` per agent (lower bound unverified); `effort` on `vault` (it edits).
